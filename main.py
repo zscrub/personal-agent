@@ -3,25 +3,26 @@ import os
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from ollama import Client
 
 LOCAL_MODEL_URL = os.getenv("LOCAL_MODEL_URL", "http://localhost:11434/")
 
 app = FastAPI(title="Concise-Pi API", version="0.1")
+client = Client(host="http://localhost:11434")
 
 class AskRequest(BaseModel):
     query: str
 
 
 def query_local_model(prompt: str) -> str:
-    payload = {
-        "model": "concise-pi",
-        "prompt": prompt,
-        "stream": False
-    }
     try:
-        response = requests.post(LOCAL_MODEL_URL, json=payload, timeout=180)
-        response.raise_for_status()
-        return response.json().get("response", "").strip()
+        response = client.chat(model="concise-pi", messages=[
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ])
+        return response.message.content
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Local model error: {e}")
 
